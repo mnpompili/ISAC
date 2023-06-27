@@ -220,7 +220,7 @@ for j=1:length(members) % no reason to test latest addition; we've already perfo
     globalCount = sum(ExclusiveCountInIntervals(spikes(:,1),activity)) - sum(ExclusiveCountInIntervals(s(:,1),activity));  % How many of the spikes are within the window distance around activations
     
     count = sum(ExclusiveCountInIntervals(jSpikes,activity));
-    zOthers(j) = zBinomialComparison(count,length(jSpikes),globalCount,length(nonmemberMUA));
+    zOthers(j) = zBinomialComparison(count,length(jSpikes),globalCount,sum(~ok));
     
     if any(zOthers(j)<threshold), pass = false; end
 end

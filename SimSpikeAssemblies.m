@@ -13,11 +13,11 @@ function [assemblies,nMin] = SimSpikeAssemblies(spikes,windowSize,threshold,nMin
 if isempty(spikes), assemblies = []; allActivations = []; nMin = 0; return; end % return 0 assemblies in absence of spikes
 % Default parameter values:
 % if ~exist('nMin','var') || isempty(nMin),nMin = max(10,(spikes(end,1)-spikes(1))/60/5); end % at least once every 5 minutes (and a minimum of 10 times)
-if ~exist('nMin','var') || isempty(nMin),nMin = 1; end % at least once every 5 minutes (and a minimum of 10 times)
-if ~exist('threshold','var'),threshold = sqrt(2) * erfcinv(0.01); end % equvalent to p=0.01, approximately 2.57
-if ~exist('verbose','var'),verbose = false; end
-if ~exist('maxSize','var'),maxSize = max(spikes(:,2)); end% how many cycles to perform
-if ~exist('minSize','var'),minSize = 3; end% by default, cell pairs are not considered assembly (triplets at a minimum)
+if ~exist('nMin','var') || isempty(nMin), nMin = 1; end % at least once every 5 minutes (and a minimum of 10 times)
+if ~exist('threshold','var') || isempty(threshold), threshold = sqrt(2) * erfcinv(0.01); end % equvalent to p=0.01, approximately 2.57
+if ~exist('verbose','var') || isempty(verbose), verbose = false; end
+if ~exist('maxSize','var') || isempty(maxSize), maxSize = max(spikes(:,2)); end% how many cycles to perform
+if ~exist('minSize','var') || isempty(minSize), minSize = 3; end% by default, cell pairs are not considered assembly (triplets at a minimum)
 
 
 %% Start with assembly sizes of 1

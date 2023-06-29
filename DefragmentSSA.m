@@ -1,4 +1,4 @@
-function [assemblies,triplets] = TolerantDefragmentSSA(origAssemblies,spikes,windowSize,threshold,nMin,verbose,tolerance)
+function [assemblies,triplets] = DefragmentSSA(origAssemblies,spikes,windowSize,threshold,nMin,verbose,tolerance)
 
 if isempty(origAssemblies)
     assemblies = origAssemblies;

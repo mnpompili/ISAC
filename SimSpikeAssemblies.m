@@ -22,6 +22,7 @@ if ~exist('minSize','var') || isempty(minSize), minSize = 3; end% by default, ce
 
 %% Start with assembly sizes of 1
 
+spikes = sortrows(spikes);
 nUnits = max(spikes(:,2));
 [final,assemblies] = deal(zeros(0,nUnits)); % variables containing the final assemblies
 

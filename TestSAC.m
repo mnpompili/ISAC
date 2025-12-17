@@ -1,4 +1,4 @@
-function [pass,assembly,zItself,zOthers] = VerifycAssembly(assembly,spikes,windowSize,threshold,skip)
+function [pass,assembly,zItself,zOthers] = TestSAC(assembly,spikes,windowSize,threshold,skip)
 
 members = find(assembly);
 zItself = nan(length(members),length(members));
@@ -47,7 +47,7 @@ for j=1:length(members)
 		% if zItself(j,without)>1.96, then neuron j is significantly more likely to participate in a complete assembly activation
 		% than an activation of the assembly without one member (member "without" )
 	end
-	if any(zItself(j,:)<threshold), pass = false; assembly(members(j))=0; return; end
+	if any(zItself(j,:)<threshold), pass = false; assembly(members(j))=0; end
 	
 	nonmemberMUA = spikes(~ok,1);
 	globalCount = length(fastPETH(nonmemberMUA,activity,[-1 1]*windowSize/2));
@@ -55,6 +55,6 @@ for j=1:length(members)
 	count = length(fastPETH(jSpikes,activity,[-1 1]*windowSize/2));
 	zOthers(j) = zBinomialComparison(count,length(jSpikes),globalCount,length(nonmemberMUA));
 	
-	if any(zOthers(j)<threshold), pass = false; assembly(members(j))=0; return; end
+	if any(zOthers(j)<threshold), pass = false; assembly(members(j))=0; end
 end
 

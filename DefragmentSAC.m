@@ -1,4 +1,4 @@
-function [assemblies,triplets] = DefragmentSSA(origAssemblies,spikes,windowSize,threshold,nMin,verbose,tolerance)
+function [assemblies,triplets] = DefragmentSAC(origAssemblies,spikes,windowSize,threshold,nMin,verbose,tolerance)
 
 if isempty(origAssemblies)
     assemblies = origAssemblies;
@@ -95,7 +95,7 @@ for currentSize = (currentSize):100 % It should technically be Infinity but 100 
         theseHits = cell(size(combinations,1),1); theseCliques = false(size(combinations,1),1);
         for i=1:size(combinations,1)
             ok = combinations(i,:)>0;
-            comb = SSA_SplitAssemblies(combinations(i,:),3);
+            comb = SplitAssemblies(combinations(i,:),3);
             if mean(~ismember(comb(:,ok),triplets(:,ok),'rows'))<=tolerance
                 theseCliques(i) = true;
                 hitID = sum(candidateAssembliesToMerge(possibleExtensions,ok),2)==currentSize;

@@ -1,4 +1,4 @@
-function splitAssemblies = SSA_SplitAssemblies(origAssemblies,nMembers,verbose)
+function splitAssemblies = SplitAssemblies(origAssemblies,nMembers,verbose)
 
 
 nUnits = size(origAssemblies,2);

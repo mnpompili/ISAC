@@ -1,12 +1,29 @@
-function [pass,assembly,zItself,zOthers] = TestSAC(assembly,spikes,windowSize,threshold)
+function [pass,assembly,zItself,zOthers] = TestSAC(assembly,spikes,windowSize,threshold,full)
 
 % This tests for same criteria, but we are confirming that all the members still pass in the newly extended assembly
 
 % Initialise variables
+if ~exist('full','var')
+    % Add default value of "full", which is "true": 
+    % whether the scores are expected regardless of whether the assembly passes the criteria or not
+    full = true; 
+    % if full=false, then any failure in a criterion would abort the remaining tests to gain computation speed
+end 
+
+if ~isvector(assembly) % if more than one assembly is quiried, call the function iteratively
+    pass = false(length(assembly(:,1)));
+    [zItself,zOthers] = deal(cell(size(assembly(:,1))));
+    for i=1:size(assembly,1)
+        [pass(i),~,zItself{i,1},zOthers{i,1}] = TestSAC(assembly(i,:),spikes,windowSize,threshold,full);
+    end
+    return
+end
+
 members = find(assembly);
 zItself = nan(length(members),length(members));
 zOthers = nan(length(members),1);
 pass = true;
+
 % make sure "spikes" is a matrix of [timestamp id], and "spikeCell" is a cell of {timestamps1,timestamps2,...} for each neuron
 if ismatrix(spikes), for i=1:max(spikes(:,2)), spikesCell{i} =  spikes(spikes(:,2)==i); end
 elseif iscell(spikes), spikesCell = spikes; temp = spikesCell;
@@ -16,6 +33,7 @@ elseif iscell(spikes), spikesCell = spikes; temp = spikesCell;
     spikes = sortrows(cat(1,temp{:}));
 end
 nUnits = length(spikesCell);
+if length(threshold)==1, threshold = ones(1,2)*threshold; end
 
 for j=1:length(members) % Consider each member neuron separately
     jSpikes = spikesCell{members(j)};
@@ -59,7 +77,9 @@ for j=1:length(members) % Consider each member neuron separately
     % First criterion
     zOthers(j) = zBinomialComparison(count,length(jSpikes),globalCount,sum(~ok));
     % zOthers is the proportion of spikes within activation for this neuron significantly higher than the equivalent proportion for the global multiunit activity
-    if zOthers(j)<threshold(1), pass = false; assembly(members(j))=0; return; end % if any of the members does not pass any more, abort any further tests
+    if zOthers(j)<threshold(1), pass = false; assembly(members(j))=0; 
+        if ~full, return; end
+    end % if any of the members does not pass any more, abort any further tests
     
     % Second criterion
     for without = 1:length(otherMembers)
@@ -69,7 +89,9 @@ for j=1:length(members) % Consider each member neuron separately
         % if zItself(j,without)>threshold, then neuron j has significantly more of its spikes participating in a complete assembly activation
         % than an activation of the assembly without one member ("incomplete" activations)
     end
-    if any(zItself(j,:)<threshold(2)), pass = false; assembly(members(j))=0; return; end % if any of the members does not pass any more, abort any further tests
+    if any(zItself(j,:)<threshold(2)), pass = false; assembly(members(j))=0; 
+        if ~full, return; end % if any of the members does not pass any more, abort any further tests
+    end 
 end
 
 

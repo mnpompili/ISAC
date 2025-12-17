@@ -21,7 +21,10 @@ function assemblies = ISAC(spikes, windowSize, varargin)
 %    -------------------------------------------------------------------------
 %     'threshold'       (Default: 2.57) A statistical cutoff (in z-scores) to decide
 %                       if a neuron belongs to an assembly. A higher value makes the
-%                       detection more strict. 2.57 corresponds to a p-value of ~0.005.
+%                       detection more strict. 2.57 corresponds to a
+%                       p-value of ~0.005. If two values are provided, the
+%                       first would be used for the affinity criterion, and
+%                       the second, for the unity criterion.
 %     'nMin'            (Default: 1) The minimum number of times an assembly must be
 %                       active to be included in the results.
 %     'verbose'         (Default: false) Set to 'true' to display progress messages
@@ -68,7 +71,7 @@ addRequired(p, 'spikes', @(x) isnumeric(x) && size(x, 2) == 2);
 addRequired(p, 'windowSize', @isscalar);
 
 % Define optional name-value pairs
-addParameter(p, 'threshold', sqrt(2) * erfcinv(0.01), @isscalar);
+addParameter(p, 'threshold', sqrt(2) * erfcinv(0.01), @(x) isscalar(x) | isvector(x));
 addParameter(p, 'nMin', 1, @isscalar);
 addParameter(p, 'verbose', false, @islogical);
 addParameter(p, 'maxSize', max(spikes(:,2)), @isscalar);
@@ -88,6 +91,7 @@ minSize = p.Results.minSize;
 groupID = p.Results.groupID;
 constraints = p.Results.constraints;
 
+if length(threshold)==1, threshold = ones(1,2) * threshold; end
 %% Start with assembly sizes of 1
 
 spikes = sortrows(spikes);
@@ -203,8 +207,8 @@ for cycle = 1:maxSize-2 % 1st cycle is triplets, so the number of cycles should 
         % These neurons would be considered again below (in the "if cycle>1" statement)
     end
     % add the cells with z values passing the threshold
-    [assemblyID,neuronID] = find(zArray>=threshold);
-    nExtendedAssemblies = sum(zArray(:)>=threshold); % the number of extensions
+    [assemblyID,neuronID] = find(zArray>=threshold(2));
+    nExtendedAssemblies = sum(zArray(:)>=threshold(2)); % the number of extensions
     if verbose
         display(['confirming ' num2str(nExtendedAssemblies) ' candidate assemblies... toc:' num2str(toc) 's.'])
     end
@@ -322,12 +326,12 @@ for j=neuronsToConsider
     zOthers(j) = zBinomialComparison(count,nSpikes,globalCount,sum(~ok));
     % zOthers is the proportion of spikes within activation for this neuron significantly higher than the equivalent proportion for the global multiunit activity
     
-    if zOthers(j)>threshold % If the first criterion passes, compute the second one (zItself) as well
+    if zOthers(j)>threshold(1) % If the first criterion passes, compute the second one (zItself) as well
         for without = 1:nMembers
             countIncomplete = sum(ExclusiveCountInIntervals(s,activityIncomplete{without}));% how many activations does the neuron participate in
             countIncomplete = countIncomplete / durationCountIncomplete(without)*duration; % normalise for duration (transform countIncomplete to a value comparable with the complete "count")
             zItself(j,without) = zBinomialComparison(count,nSpikes,countIncomplete,nSpikes); % perform a z-test (equivalent to a chi-square test)
-            % if zItself(j,without)>threshold, then neuron j has significantly more of its spikes participating in a complete assembly activation
+            % if zItself(j,without)>threshold(2), then neuron j has significantly more of its spikes participating in a complete assembly activation
             % than an activation of the assembly without one member ("incomplete" activations)
         end
     end
@@ -389,7 +393,7 @@ for j=1:length(members) % Consider each member neuron separately
     % First criterion
     zOthers(j) = zBinomialComparison(count,length(jSpikes),globalCount,sum(~ok));
     % zOthers is the proportion of spikes within activation for this neuron significantly higher than the equivalent proportion for the global multiunit activity
-    if zOthers(j)<threshold, pass = false; assembly(members(j))=0; return; end % if any of the members does not pass any more, abort any further tests
+    if zOthers(j)<threshold(1), pass = false; assembly(members(j))=0; return; end % if any of the members does not pass any more, abort any further tests
     
     % Second criterion
     for without = 1:length(otherMembers)
@@ -399,7 +403,7 @@ for j=1:length(members) % Consider each member neuron separately
         % if zItself(j,without)>threshold, then neuron j has significantly more of its spikes participating in a complete assembly activation
         % than an activation of the assembly without one member ("incomplete" activations)
     end
-    if any(zItself(j,:)<threshold), pass = false; assembly(members(j))=0; return; end % if any of the members does not pass any more, abort any further tests
+    if any(zItself(j,:)<threshold(2)), pass = false; assembly(members(j))=0; return; end % if any of the members does not pass any more, abort any further tests
 end
 
 function varargout = helper_ApplyConstraints(assemblies,groupID,constraints,skipCell)

@@ -9,11 +9,11 @@ if ~exist('verbose','var'), verbose = false; end
 % We need to break up bigger assemblies in smaller constituents:
 maxSize = max(sizes);
 assemblies = origAssemblies(sizes==currentSize,:);
-if verbose, display([datestr(clock) ': ' addComma(size(assemblies,1)) ' ' currentSize '-member assemblies present. Splitting larger assemblies into smaller constituents. Tic.']); end
+if verbose, display([datestr(clock) ': ' num2str(size(assemblies,1)) ' ' currentSize '-member assemblies present. Splitting larger assemblies into smaller constituents. Tic.']); end
 cellData{currentSize,1} = logical(assemblies);
 for i=currentSize+1:maxSize
     largeAssemblies = origAssemblies(sizes==i,:);
-    if verbose, display([datestr(clock) ': Starting to split ' addComma(size(largeAssemblies,1)) ' ' addComma(i) '-member assemblies into groups of ' addComma(currentSize) ' members. toc=' addComma(round(toc))]); end
+    if verbose, display([datestr(clock) ': Starting to split ' num2str(size(largeAssemblies,1)) ' ' num2str(i) '-member assemblies into groups of ' num2str(currentSize) ' members. toc=' num2str(round(toc))]); end
     currentData = cell(size(largeAssemblies,1),1);
     for k=1:size(largeAssemblies,1)
         variants = nchoosek(find(largeAssemblies(k,:)),currentSize);
@@ -22,7 +22,7 @@ for i=currentSize+1:maxSize
         currentData{k} = fragment;
     end
     cellData{i,1} = cell2mat(currentData);
-    if verbose && toc>1, display([datestr(clock) ': ' addComma(i) '-member assemblies split into groups of ' addComma(currentSize) ' members. toc=' addComma(round(toc))]); end
+    if verbose && toc>1, display([datestr(clock) ': ' num2str(i) '-member assemblies split into groups of ' num2str(currentSize) ' members. toc=' num2str(round(toc))]); end
 end
 splitAssemblies = cell2mat(cellData(~cellfun(@isempty,cellData)));
 splitAssemblies = unique(splitAssemblies,'rows');

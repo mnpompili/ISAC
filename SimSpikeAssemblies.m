@@ -1,24 +1,92 @@
-function [assemblies,nMin] = SimSpikeAssemblies(spikes,windowSize,threshold,nMin,verbose,maxSize,minSize)
+function assemblies = ISAC(spikes, windowSize, varargin)
 
-% input "spikes" is a [timestamp neuronID] matrix (sorted in time)
-% input "windowSize" is the desired timescale of an assembly, i.e. how close in time spikes have to be to be considered an assembly activation
-% input "threshold" is the threshold for the two statistical criteria to qualify a neuron belonging to an assembly.
-% The threshold is provided in z units (standard deviations). We recommend using z=2.57, which for a single-tailed hypothesis (we only test in one diretion), corresponds to p~=0.005
-% input "nMin" sets the minimum number of activations for an assembly to be considered (assemblies with fewer activations will not be extended).
-% By default, "nMin" is once every 5 minutes, or a minimum of 10 for recordings shorter than 50 minutes.
-% input "verbose" is a logical value (true/false, false by default), where if verbose==true, program will display progress on every cycle (using tic/toc functions)
-% input "maxSize" is an optional parameter of the largest assembly to consider. This way the user has the option to, for example, compute triplets only
-% input "minSize" is an optional parameter of the smallest assembly to consider. By default, cell pairs are not considered assemblies (minSize=3 neurons)
+% ISAC finds groups of neurons that fire together (assemblies).
+%
+%   assemblies = ISAC(spikes, windowSize)
+%   assemblies = ISAC(spikes, windowSize, 'Name', Value, ...)
+%
+%   This function finds statistically significant groups of neurons, called
+%   "assemblies," that tend to fire spikes at the same time.
+%
+%   REQUIRED INPUTS
+%   spikes        - a two-column [timestamp, unitID] matrix containing
+%                   the list of  spikes for each unit
+%   windowSize    - assembly timescale. This is the largest time gap
+%                   allowed between spikes for them to be considered a part
+%                   of the same assembly activation event.
+%   <options>      optional list of property-value pairs (see table below)
+%
+%   =========================================================================
+%      Properties       Values
+%    -------------------------------------------------------------------------
+%     'threshold'       (Default: 2.57) A statistical cutoff (in z-scores) to decide
+%                       if a neuron belongs to an assembly. A higher value makes the
+%                       detection more strict. 2.57 corresponds to a p-value of ~0.005.
+%     'nMin'            (Default: 1) The minimum number of times an assembly must be
+%                       active to be included in the results.
+%     'verbose'         (Default: false) Set to 'true' to display progress messages
+%                       while the function is running.
+%     'maxSize'         (Default: total number of neurons n) The largest number of
+%                       neurons allowed in a single assembly.
+%     'minSize'         (Default: 3) The smallest number of neurons allowed in a
+%                       single assembly.
+%     'groupID'         (Default: ones(n,1)) A vector specifying the
+%                       a group ID for for each neuron. This can be a cell
+%                       type, a recorded region, or any division of cells
+%                       (e.g. reward-responsive, etc).
+%     'constraints'     (Default: {}) A cell containing the group
+%                       constraint for the desired assemblies. For example,
+%                       {[2]} would indicate that the function should only
+%                       look for assemblies containing at least one neurons
+%                       from group 2 (see 'groupID' above), and {[1 2 3]}
+%                       indicates that the function should look for
+%                       cross-group assemblies containing members from
+%                       groups 1, 2, and 3, together. Note you can provide
+%                       multiple cells: {[1 2],4} will look for
+%                       cross-group assemblies containing members from both
+%                       groups 1 and 2, and also any assemblies containing
+%                       members from group 4.
+%    =========================================================================
 
-if isempty(spikes), assemblies = []; allActivations = []; nMin = 0; return; end % return 0 assemblies in absence of spikes
-% Default parameter values:
-% if ~exist('nMin','var') || isempty(nMin),nMin = max(10,(spikes(end,1)-spikes(1))/60/5); end % at least once every 5 minutes (and a minimum of 10 times)
-if ~exist('nMin','var') || isempty(nMin), nMin = 1; end % at least once every 5 minutes (and a minimum of 10 times)
-if ~exist('threshold','var') || isempty(threshold), threshold = sqrt(2) * erfcinv(0.01); end % equvalent to p=0.01, approximately 2.57
-if ~exist('verbose','var') || isempty(verbose), verbose = false; end
-if ~exist('maxSize','var') || isempty(maxSize), maxSize = max(spikes(:,2)); end% how many cycles to perform
-if ~exist('minSize','var') || isempty(minSize), minSize = 3; end% by default, cell pairs are not considered assembly (triplets at a minimum)
+%
+%   OUTPUT
+%   assemblies    - A structure that contains the detected neuron assemblies
+%                   and the times they were active.
 
+% If there are no spikes, return an empty result.
+if isempty(spikes)
+    assemblies = [];
+    return;
+end
+
+
+% --- Input Parser: Manages function inputs and default values ---
+p = inputParser;
+
+% Define required inputs
+addRequired(p, 'spikes', @(x) isnumeric(x) && size(x, 2) == 2);
+addRequired(p, 'windowSize', @isscalar);
+
+% Define optional name-value pairs
+addParameter(p, 'threshold', sqrt(2) * erfcinv(0.01), @isscalar);
+addParameter(p, 'nMin', 1, @isscalar);
+addParameter(p, 'verbose', false, @islogical);
+addParameter(p, 'maxSize', max(spikes(:,2)), @isscalar);
+addParameter(p, 'minSize', 3, @isscalar);
+addParameter(p, 'groupID', ones(max(spikes(:, 2)), 1), @(x) isvector(x) & length(x)==max(spikes(:,2)));
+addParameter(p, 'constraints', {}, @iscell);
+
+% Parse the inputs provided by the user
+parse(p, spikes, windowSize, varargin{:});
+
+% Assign the parsed inputs (or their defaults) to variables
+threshold = p.Results.threshold;
+nMin = p.Results.nMin;
+verbose = p.Results.verbose;
+maxSize = p.Results.maxSize;
+minSize = p.Results.minSize;
+groupID = p.Results.groupID;
+constraints = p.Results.constraints;
 
 %% Start with assembly sizes of 1
 
@@ -29,10 +97,18 @@ nUnits = max(spikes(:,2));
 nUnits = max(spikes(:,2));
 
 pairs = combnk(1:nUnits,2); % We start off with all possible pairs. Starting from these pairs, the first cycle will consider all 3-cell combinations (adding a cell to each pair)
-lArray = false(length(pairs),nUnits); % lArray stands for "logical array", where each line is an assembly and each column is a neuron,
+% Initialize "lArray":
+% "lArray" stands for "logical array",
+% where each line is an assembly and each column is a neuron,
 % so [1 1 0 1 0 0;...] would mean that neurons 1, 2 and 4 together form the first assembly
+lArray = false(length(pairs),nUnits);
 lArray(sub2ind(size(lArray),(1:size(lArray,1))',pairs(:,1)))=true;
 lArray(sub2ind(size(lArray),(1:size(lArray,1))',pairs(:,2)))=true;
+
+% Apply constraints (remove pairs that don't correspond to desired constraints)
+if ~isempty(constraints)
+    lArray = helper_ApplyConstraints(lArray,groupID,constraints);
+end
 
 %% Cycle to expand assemblies
 
@@ -60,10 +136,14 @@ for cycle = 1:maxSize-2 % 1st cycle is triplets, so the number of cycles should 
     if cycle==1
         % Pre-compute comparisons to skip
         % First cycle we test all triplets. We can only test triplets with members higher than the current members
-        % e,.g. consider adding 10 to [1 9] but not 8 (8<9). This avoids duplicates and each triplet is only tested once
-        parfor i=1:nPrevStep
-            members = find(lArray0(i,:));
-            skipCell{i,1} = 1:max(members);
+        % e.g. consider adding 10 to [1 9] but not 8 (8<9). This avoids duplicates and each triplet is only tested once
+        if ~isempty(constraints)
+            skipCell = cell(nPrevStep,1);
+        else
+            parfor i=1:nPrevStep %PARFOR
+                members = find(lArray0(i,:));
+                skipCell{i,1} = 1:max(members);
+            end
         end
     else
         try
@@ -85,14 +165,14 @@ for cycle = 1:maxSize-2 % 1st cycle is triplets, so the number of cycles should 
                 duplicates(ok)=dd;
                 done = done|ok;
             end
-            parfor i=1:nPrevStep
+            skipCell = cell(nPrevStep,1);
+            parfor i=1:nPrevStep %PARFOR
                 these = all_neuronID(all_iID==i);
                 skipCell{i,1} = these((duplicates(all_iID==i)));
             end
         catch % if the required ram causes an error
             skipCell = cell(nPrevStep,1);
-            % (we don't need to test adding 1 to [2 3] (candidate assembly [1 2 3]) if we consider add 3 to [1 2] (candidate assembly also [1 2 3])
-            parfor i=2:nPrevStep
+            parfor i=2:nPrevStep %PARFOR
                 l = lArray0(i,:);
                 this = double(l);
                 code = 1:nUnits; code(l) = [];
@@ -103,11 +183,17 @@ for cycle = 1:maxSize-2 % 1st cycle is triplets, so the number of cycles should 
         end
     end
     
+    % Apply constraints (remove pairs that don't correspond to desired constraints)
+    if ~isempty(constraints)
+        skipCell = helper_ApplyConstraints(lArray,groupID,constraints,skipCell);
+    end
+    
     if verbose
         display(['starting... toc:' num2str(toc) 's.'])
     end
-    % compute z-values (confidence that we should add a given cell to the assembly)
+    % compute z-values (confidence that we should add a gixven cell to the assembly)
     spikesCell; % rappel?
+    % PARFOR
     parfor i=1:nPrevStep % for each of the possible assemblies to extend
         members = find(lArray0(i,:));
         zArray(i,:) = helper_zToExtendAssembly(spikesCell,spikes,members,windowSize,threshold,nMin,skipCell{i}); % the test is performed in a helper function to keep the code more readable
@@ -119,14 +205,14 @@ for cycle = 1:maxSize-2 % 1st cycle is triplets, so the number of cycles should 
     % add the cells with z values passing the threshold
     [assemblyID,neuronID] = find(zArray>=threshold);
     nExtendedAssemblies = sum(zArray(:)>=threshold); % the number of extensions
-     if verbose
+    if verbose
         display(['confirming ' num2str(nExtendedAssemblies) ' candidate assemblies... toc:' num2str(toc) 's.'])
     end
     if nExtendedAssemblies>0 % If there is at least 1 new assembly found this round
         lArray = lArray0(assemblyID,:); % take the corresponding assemblies of the old array
         lArray(sub2ind(size(lArray),(1:nExtendedAssemblies)',neuronID(:)))=true; % To each one, add the new qualified member
         passes = false(nExtendedAssemblies,1); % initialise passing variable
-        parfor j=1:nExtendedAssemblies
+        parfor j=1:nExtendedAssemblies %PARFOR
             % Verify that this new extended assembly still passes the stitistical criterion for *every* member (not just the newly added one)
             passes(j) = helper_confirmAssembly(lArray(j,:),spikesCell,spikes,windowSize,threshold,neuronID(j));
         end
@@ -163,19 +249,6 @@ isIncluded = bsxfun(@eq, commons,numNeurons);
 % Change the indices so they reflect the bigger assembly (which will be retained)
 bad = (sum(isIncluded,2)>0);
 assemblies(bad,:) = [];
-
-% %% Save activations
-%
-% if nargout<2 % compute only if second argument is called
-%     return
-% end
-% for i=1:size(assemblies,1)
-%     ok = ismember(spikes(:,2),find(assemblies(i,:)));
-%     code = cumsum(assemblies(i,:))';
-%     allActivations{i,1} = commonIntervals_fast([spikes(ok,1) code(spikes(ok,2))], windowSize, sum(assemblies(i,:)), sum(assemblies(i,:)));
-% end
-
-
 
 %% === Helper functions: ===
 
@@ -238,9 +311,9 @@ for j=neuronsToConsider
     nSpikes = length(s);
     if isempty(s), continue; end
     
-%     % Are there enough activations containing this spike?
-%     count2 = sum(ExclusiveCountInIntervals(s,activity)>0); % How many activations are within the window distance around spikes
-%     if count2<nMin, continue; end % If the total number of activations including this neuron would be too low to consider the extended assembly, don't add this neuron and abort further tests
+    %     % Are there enough activations containing this spike?
+    %     count2 = sum(ExclusiveCountInIntervals(s,activity)>0); % How many activations are within the window distance around spikes
+    %     if count2<nMin, continue; end % If the total number of activations including this neuron would be too low to consider the extended assembly, don't add this neuron and abort further tests
     
     % How many of this neuron's spikes participate in activations:
     count = sum(ExclusiveCountInIntervals(s,activity)); % How many of the spikes are within the window distance around activations
@@ -329,6 +402,54 @@ for j=1:length(members) % Consider each member neuron separately
     if any(zItself(j,:)<threshold), pass = false; assembly(members(j))=0; return; end % if any of the members does not pass any more, abort any further tests
 end
 
+function varargout = helper_ApplyConstraints(assemblies,groupID,constraints,skipCell)
+% Apply constraints (e.g. "SGs should be cross-structural").
+% This will remove assemblies that do not follow the constraints.
+
+
+
+grouped = nan(size(assemblies,1),max(groupID));
+for i=1:max(groupID)
+    grouped(:,i) = sum(assemblies(:,groupID==i),2);
+end
+
+
+% This function can be called either to confirm existing SGs,
+% or to flag cells to skip when considering extending the assembly.
+% Behavior in each case is different:
+
+if nargin<4 % apply constraints to existing SGs
+    pass = false(size(assemblies,1),1);
+    for i=1:length(constraints)
+        constraint = constraints{i}(:);
+        constraint = Accumulate(constraint(:),1,'size',max(groupID));
+        constraint = constraint(:)';
+        missing = constraint-grouped; missing(missing<0) = 0;
+        maxMissingAllowed = max([sum(constraint)-sum(assemblies(1,:)),0]);
+        pass(sum(missing,2)<=maxMissingAllowed) = true;
+    end
+    filtered = assemblies(pass,:);
+    varargout = {filtered,pass};
+else
+    missingCell = cell(1,length(constraints));
+    for i=1:length(constraints)
+        constraint = constraints{i}(:);
+        constraint = Accumulate(constraint(:),1,'size',max(groupID));
+        constraint = constraint(:)';
+        missing = constraint-grouped; missing(missing<0) = 0;
+        missingCell{i} = missing;
+    end
+    alreadyFullfulled = sum(cell2mat(cellfun(@(x) ~any(x,2),missingCell,'UniformOutput',false)),2)>0;
+    avoidGroup = sum(cat(3,missingCell{:}),3)==0;
+    avoidGroup(alreadyFullfulled,:) = false;
+    groups = cell(1,max(groupID));
+    for i=1:max(groupID), groups{i} = find(groupID(:)'==i); end
+    
+    rowKeep  = num2cell(avoidGroup, 2); % each row → 1×M logical mask
+    result = cellfun(@(sk, rk) unique([groups{rk}, sk], 'sorted'), skipCell, rowKeep, 'UniformOutput', false);
+    
+    varargout = {result};
+end
 
 
 

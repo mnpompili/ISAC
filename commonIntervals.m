@@ -23,6 +23,14 @@ function intervals = commonIntervals(spikes, windowSize, numCommon, numCells, do
 % OUTPUT:
 % - outputIntervals: M x 2 matrix of the different intervals which have
 %   numCommon overlapping elements.
+%
+% Copyright (C) 2020-2026 by Gabriel Makdah
+%
+% This program is free software; you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation; either version 3 of the License, or
+% (at your option) any later version.
+
 
 if ~exist('doOverlap','var') || isempty(doOverlap)
     doOverlap = 0;

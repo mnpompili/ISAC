@@ -1,5 +1,50 @@
 function [assemblies,triplets] = DefragmentSAC(origAssemblies,spikes,windowSize,threshold,nMin,verbose,tolerance)
 
+% DefragmentSAC merges overlapping assemblies into larger candidate groups.
+%
+%   [assemblies,triplets] = DefragmentSAC(origAssemblies,spikes,...
+%       windowSize,threshold,nMin,verbose,tolerance)
+%
+%   This function iteratively combines smaller overlapping assemblies into
+%   larger assemblies when the merged groups satisfy co-activation
+%   criteria. Larger assemblies are constructed from compatible smaller
+%   subassemblies ("cliques").
+%
+%   REQUIRED INPUTS
+%   origAssemblies - a binary matrix where each row corresponds to an
+%                    assembly and each column corresponds to a neuron.
+%
+%   spikes         - a two-column [timestamp, unitID] matrix containing
+%                    the list of spikes for each unit.
+%
+%   windowSize     - assembly timescale used to evaluate co-activation.
+%
+%   threshold      - statistical threshold used to evaluate candidate
+%                    merged assemblies (in z-units)
+%
+%   nMin           - minimum number of assembly activations required for a
+%                    merged assembly to be retained.
+%
+%   verbose        - set to true to display progress messages during
+%                    execution.
+%
+%   tolerance      - (Default: 0) fraction of missing lower-order
+%                    subassemblies allowed when evaluating candidate
+%                    assemblies.
+%
+%   OUTPUT
+%   assemblies     - binary matrix containing the final merged assemblies.
+%
+%   triplets       - binary matrix containing the initial lowest-order
+%                    assembly fragments used during clique construction.
+%
+% Copyright (C) 2020-2026 by Ralitsa Todorova & Gabriel Makdah
+%
+% This program is free software; you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation; either version 3 of the License, or
+% (at your option) any later version.
+
 if isempty(origAssemblies)
     assemblies = origAssemblies;
     return
@@ -42,7 +87,6 @@ if verbose, disp([datestr(clock) ': Done with preprocessing: starting with ' dis
 triplets = newAssemblies;
 
 %% Merge the currentSize-member assemblies into (currentSize+1)-member assemblies when the addmissible
-
 
 for currentSize = (currentSize):100 % It should technically be Infinity but 100 is used to prevent the function from running indefinitely in case of a problem
     assemblies = newAssemblies; % the "new assemblies" of the previous loop are the assemblies to merge on this loop
@@ -129,7 +173,7 @@ for currentSize = (currentSize):100 % It should technically be Infinity but 100 
             end
             for j=(1:1000)+loop % length(cellCliques)
                 thisCombination = combinations(j,:);
-                pass(j) = RateSSA2(thisCombination,spikes,windowSize,threshold,nMin);
+                pass(j) = RateSSA(thisCombination,spikes,windowSize,threshold,nMin);
                 if verbose && rem(j,100)==0, disp([datestr(clock) ': ' num2str(j)]); end
             end
         end
@@ -137,7 +181,7 @@ for currentSize = (currentSize):100 % It should technically be Infinity but 100 
         verbose = verbose; % make this variable accessible to the workers
         for j=(n+1):size(combinations,1)% length(cellCliques)
             thisCombination = combinations(j,:);
-            pass(j) = RateSSA2(thisCombination,spikes,windowSize,threshold,nMin);
+            pass(j) = RateSSA(thisCombination,spikes,windowSize,threshold,nMin);
             if verbose && rem(j,100)==0, disp([datestr(clock) ': cell passes ' num2str(j) ' computed.']); end
         end
     else % If the threshold is -Inf, don't check the first criterion
@@ -180,7 +224,7 @@ jf=java.text.DecimalFormat; % comma for thousands, three decimal places
 numOut= char(jf.format(numIn)); % omit "char" if you want a string out
 
 
-function [pass,zOthers] = RateSSA2(assembly,spikes,windowSize,threshold,nMin)
+function [pass,zOthers] = RateSSA(assembly,spikes,windowSize,threshold,nMin)
 
 % Only second criterion (ignore zItself)
 % Second criterion is that each neuron should be active during assembly activations more than the general population

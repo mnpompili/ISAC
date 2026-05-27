@@ -1,5 +1,37 @@
 function splitAssemblies = SplitAssemblies(origAssemblies,nMembers,verbose)
 
+% SplitAssemblies breaks large assemblies into smaller constituent groups.
+%
+%   splitAssemblies = SplitAssemblies(origAssemblies)
+%   splitAssemblies = SplitAssemblies(origAssemblies,nMembers)
+%   splitAssemblies = SplitAssemblies(origAssemblies,nMembers,verbose)
+%
+%   This function generates all possible subassemblies of a specified size
+%   from larger detected assemblies.
+%
+%   REQUIRED INPUTS
+%   origAssemblies - a binary matrix where each row corresponds to an
+%                    assembly and each column corresponds to a neuron.
+%                    A value of 1 indicates membership in the assembly.
+%
+%   OPTIONAL INPUTS
+%   nMembers       - (Default: minimum assembly size present) number of
+%                    members desired in the split assemblies.
+%
+%   verbose        - (Default: false) set to true to display progress
+%                    messages while the function is running.
+%
+%   OUTPUT
+%   splitAssemblies - a binary matrix containing all unique subassemblies
+%                     generated from the original assemblies.
+%
+% Copyright (C) 2020-2026 by Ralitsa Todorova & Gabriel Makdah
+%
+% This program is free software; you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation; either version 3 of the License, or
+% (at your option) any later version.
+
 
 nUnits = size(origAssemblies,2);
 sizes = sum(origAssemblies,2);

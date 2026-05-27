@@ -55,6 +55,14 @@ function assemblies = ISAC(spikes, windowSize, varargin)
 %   OUTPUT
 %   assemblies    - A structure that contains the detected neuron assemblies
 %                   and the times they were active.
+%
+% Copyright (C) 2020-2026 by Ralitsa Todorova & Gabriel Makdah
+%
+% This program is free software; you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation; either version 3 of the License, or
+% (at your option) any later version.
+
 
 % If there are no spikes, return an empty result.
 if isempty(spikes)

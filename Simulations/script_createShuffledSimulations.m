@@ -1,6 +1,11 @@
+rngCounter = 1;
+whichSimulation = 1; % select which simulation to run
+
 rng(rngCounter)
 
-spikes = getPeyracheData(1);
+filepath = fileparts(mfilename('fullpath'));
+
+data = load(fullfile(filepath,'Peyrache2009_spikes.mat'),'spikes'); spikes = data.spikes;
 cells = spikesToCells(spikes);
 spkRate = cellfun(@length,cells)/(spikes(end,1));
 cells(spkRate == 0) = [];
@@ -22,7 +27,6 @@ sizeAssemblies = 5;
 % disp('Warning, running with 10 assemblies instead of 20')
 numAssemblies =  20;
 assemblyMeanSpikes = 2;
-
 
 meanAActs = 120; % Average number of times assemblies are active
 stdAActs = 0; % SD of the first run to compute the number of times assemblies are active

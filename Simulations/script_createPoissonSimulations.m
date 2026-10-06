@@ -1,3 +1,6 @@
+rngCounter = 1;
+whichSimulation = 1; % select which simulation to run
+
 rng(rngCounter)
 sessionStart = 0;
 sessionEnd = 3600;

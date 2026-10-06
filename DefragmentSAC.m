@@ -51,6 +51,9 @@ if isempty(origAssemblies)
 end
 
 if ~exist('tolerance','var') || isempty(tolerance), tolerance = 0; end
+if ~exist('verbose','var') || isempty(verbose), verbose = false; end
+if ~exist('threshold','var') || isempty(threshold), threshold = Inf; end
+if ~exist('nMin','var') || isempty(nMin), nMin = 0; end
 
 if verbose, tic; end
 

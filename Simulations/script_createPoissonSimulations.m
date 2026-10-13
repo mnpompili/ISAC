@@ -1,5 +1,80 @@
-rngCounter = 1;
-whichSimulation = 1; % select which simulation to run
+
+% Each simulations will produce Poisson neuron background activity and assembly activations.
+
+
+% The following simulation parameters are considered default parameters:
+% session = 3600 s (1 hour)
+% numCells = 50 % number of simulated cells
+% numAssemblies = 20 % number of simulated assemblies
+% sizeAssemblies = 5 % number of assembly members per each assembly
+% meanAActs = 120 % mean number of activations for each assembly
+%
+% Particular simulation parameters are modified by changing the value of the
+% "whichSimulation" variable according to the following table of effects.
+% The table of effects indicates, for each value of the "whichSimulation"
+% variable, which parameter will be modified from the default (other
+% parameters stay the default value).
+%
+% ----whichSimulation = [1:5, 47:50]: varying the number of simulated assemblies----
+% 1 | numAssemblies = 10
+% 47 | numAssemblies = 35
+% 3 | numAssemblies = 50 
+% 48 | numAssemblies = 75
+% 4 | numAssemblies = 100 
+% 49 | numAssemblies = 150
+% 5 | numAssemblies = 200
+% 50 | numAssemblies = 300
+%
+% ----whichSimulation = [6:9, 33, 42:46]: varying simulated assembly size while keeping the number of member neurons fixed----
+% 6 | sizeAssemblies = 3; numAssemblies = 67
+% 33| sizeAssemblies = 4; numAssemblies = 33
+% 7 | sizeAssemblies = 5; numAssemblies = 20
+% 8 | sizeAssemblies = 7; numAssemblies = 10
+% 9 | sizeAssemblies = 10; numAssemblies = 4 
+% 42 | sizeAssemblies = 6; numAssemblies = 13
+% 43 | sizeAssemblies = 8; numAssemblies = 7
+% 44 | sizeAssemblies = 12; numAssemblies = 3
+% 45 | sizeAssemblies = 15; numAssemblies = 2
+% 46 | sizeAssemblies = 20; numAssemblies = 1
+%
+% ----whichSimulation = [10:19]: varying simulated recording duration while keeping the assembly activation rate fixed----
+% 10 | sessionEnd = 10 minutes (600 s); meanAActs = 10 
+% 11 | sessionEnd = 20 minutes (1200 s); meanAActs = 20 
+% 12 | sessionEnd = 30 minutes (1800 s); meanAActs = 30 
+% 13 | sessionEnd = 40 minutes (2400 s); meanAActs = 40 
+% 14 | sessionEnd = 50 minutes (3000 s); meanAActs = 50 
+% 15 | sessionEnd = meanAActs = 60 
+% 16 | sessionEnd = 70 minutes (4200 s); meanAActs = 70 
+% 17 | sessionEnd = 80 minutes (4800 s); meanAActs = 80 
+% 18 | sessionEnd = 90 minutes (5400 s); meanAActs = 90 
+% 19 | sessionEnd = 100 minutes (6000 s); meanAActs = 100 
+% 
+% ----whichSimulation = [20:27, 35:39]: varying the mean number of assembly activations (as a fraction of recording duration)----
+% 20 | 0.05 activations/min i.e. meanAActs = 3
+% 21 | 0.1 activations/min i.e. meanAActs = 6
+% 22 | 0.2 activations/min i.e. meanAActs = 12
+% 23 | 0.5 activations/min i.e. meanAActs = 30
+% 34 | 0.75 activations/min i.e. meanAActs = 45
+% 24 | 1 activations/min i.e. meanAActs = 60
+% 35 | 1.5 activations/min i.e. meanAActs = 90
+% 25 | 2 activations/min i.e. meanAActs = 120
+% 36 | 2.5 activations/min i.e. meanAActs = 150
+% 37 | 3 activations/min i.e. meanAActs = 180
+% 38 | 4 activations/min i.e. meanAActs = 240
+% 26 | 5 activations/min i.e. meanAActs = 300
+% 39 | 7 activations/min i.e. meanAActs = 420
+% 27 | 10 activations/min i.e. meanAActs = 600
+%
+% ----whichSimulation = 40-41: short recordings----
+% 40 | sessionEnd = 2 minutes (120 s); meanAActs = round(120/60) = 2
+% 41 | sessionEnd = 5 minutes (300 s); meanAActs = round(300/60) = 5
+%
+% ----whichSimulation >= 51: a particular simulation in which assembly timestamps driven by melody----
+% consult the melody_getTimestamps script
+
+
+whichSimulation = 1; % select which simulation to run (consult table above)
+rngCounter = 1; % set the random number generator for easy replicability
 
 rng(rngCounter)
 sessionStart = 0;
@@ -124,3 +199,4 @@ while retry == 1 && tooMuch < 20
         error('Could not complete the simulation')
     end
 end
+

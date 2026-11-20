@@ -73,8 +73,8 @@
 % consult the melody_getTimestamps script
 
 
-whichSimulation = 1; % select which simulation to run (consult table above)
-rngCounter = 1; % set the random number generator for easy replicability
+% whichSimulation = 1; % select which simulation to run (consult table above)
+% rngCounter = 1; % set the random number generator for easy replicability
 
 rng(rngCounter)
 sessionStart = 0;
@@ -123,12 +123,12 @@ elseif whichSimulation >= (length(numAvar)+length(sizeAvar)+1) &&...
 elseif whichSimulation >= (length(numAvar)+length(sizeAvar)+length(lengthSessVar)+1) &&...
         whichSimulation < (length(numAvar)+length(sizeAvar)+length(lengthSessVar)+length(numActVar)+1)
     meanAActs = round(numActVar(whichSimulation-length(numAvar)-length(sizeAvar)-length(lengthSessVar))*sessionEnd/60);
-elseif whichSimulation >= (length(numAvar)+length(sizeAvar)+length(lengthSessVar)+length(numActVar)+1) &&...
-         whichSimulation < (length(numAvar)+length(sizeAvar)+length(lengthSessVar)+length(numActVar)+length(numMelodyActs)+1)
-    assemblyActivationTimestamps = melody_getTimestamps(numMelodyActs(whichSimulation-(length(numAvar)+length(sizeAvar)+length(lengthSessVar)+length(numActVar))));
-    assemblyActivationTimestamps = assemblyActivationTimestamps + assembly_meanJitter; 
-    numAssemblies = size(assemblyActivationTimestamps,2);
-    sessionEnd = 600;
+% elseif whichSimulation >= (length(numAvar)+length(sizeAvar)+length(lengthSessVar)+length(numActVar)+1) &&...
+%          whichSimulation < (length(numAvar)+length(sizeAvar)+length(lengthSessVar)+length(numActVar)+length(numMelodyActs)+1)
+%     assemblyActivationTimestamps = melody_getTimestamps(numMelodyActs(whichSimulation-(length(numAvar)+length(sizeAvar)+length(lengthSessVar)+length(numActVar))));
+%     assemblyActivationTimestamps = assemblyActivationTimestamps + assembly_meanJitter; 
+%     numAssemblies = size(assemblyActivationTimestamps,2);
+%     sessionEnd = 600;
 elseif whichSimulation == 33
     sizeAssemblies = 4;
     numAssemblies = round(totalCombs/(factorial(sizeAssemblies)/factorial(sizeAssemblies-2)*factorial(2)));
